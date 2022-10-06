@@ -1,0 +1,705 @@
+
+
+
+Private Sub BtnCloseForm_Click()
+
+'closes the home of happy buttons userform
+
+Me.Hide
+
+End Sub
+
+Private Sub BtnPostFinal_Click()
+If ProgramNameInfo Like "*A??P*" Then
+    'DAF Path
+End If
+
+If ProgramNameInfo Like "J??P" Then
+    'DAF Path
+End If
+
+
+If ProgramNameInfo Like "FTD" Then
+    'DAF Path
+End If
+
+End Sub
+
+Private Sub BtnSaveAsDraft_Click()
+
+Dim DraftDAFFileName As String
+Dim ErrorsPresent As Integer
+Dim UpLevel As String
+
+Call MakeDAFFileName(DraftDAFFileName, ErrorsPresent)
+If ErrorsPresent > 0 Then
+    MsgBox "There was missing info in identifying information. Try again."
+    Exit Sub
+End If
+
+UpLevel = Left(ThisDocument.Path, InStrRev(ThisDocument.Path, "\"))
+
+DraftDAFFileName = DraftDAFFileName & "_Draft.docm"
+
+DraftDAFFileName = UpLevel & DraftDAFFileName
+
+
+'wdDialogFileSaveAs
+With Dialogs(wdDialogFileSaveAs)
+    .Name = DraftDAFFileName
+    .Format = wdFormatXMLDocumentMacroEnabled
+    .Show
+End With
+'document_text, type_num, prot_pwd, backup, write_res_pwd, read_only_rec
+
+End Sub
+
+
+Public Sub MakeDAFFileName(ByRef DAFFileName As String, ErrorCounter As Integer)
+'This sub generates the save name of the DAF file.
+'It will return the DAF file name to whatever sub calls it
+'Format is ClientFullName_ProgramName_AssessmentType_CompletionDate_AuthorInitials
+
+Dim ClientFirstNameDAF As FormField
+Dim ClientLastNameDAF As FormField
+Dim ProgramName As FormField
+Dim DAFCompleteDate As FormField
+Dim DAFAuthorName As FormField
+Dim ClientFirstNameDAFInfo As String
+Dim ClientLastNameDAFInfo As String
+Dim ProgramNameInfo As String
+Dim DAFCompleteDateInfo As Date
+Dim DAFAuthorNameInfo As String
+Dim FirstInitial As String
+Dim SecondInitial As String
+Dim AuthorInitials As String
+Dim FirstSpace As Long
+Dim DAFCtFullName As String
+Dim ProgramAcronym As String
+Dim Test1Chars As String
+Dim Test2Chars As String
+Dim Test3Chars As String
+Dim Test4Chars As String
+Dim StringLength As Integer
+Dim CounterNo As Long
+Dim CapitalCount As Integer
+Dim LeftPosition As Integer
+Dim AcroLength As Integer
+Dim ASCstrValue1 As String
+Dim ASCstrValue2 As String
+Dim ASCstrValue3 As String
+Dim ASCstrValue4 As String
+'might need to modify the acronym extractor for programs which don't fit the current extraction scheme.
+
+
+ErrorCounter = 0
+
+If ActiveDocument.FormFields("ClientFirstNameDAF").Result = "" Then
+    GoTo ErrorMsgOnSave
+ElseIf ActiveDocument.FormFields("ClientLastNameDAF").Result = "" Then
+    GoTo ErrorMsgOnSave
+ElseIf ActiveDocument.FormFields("ProgramName").Result = "" Then
+    GoTo ErrorMsgOnSave
+ElseIf ActiveDocument.FormFields("DAFCompleteDate").Result = "" Then
+    GoTo ErrorMsgOnSave
+ElseIf ActiveDocument.FormFields("DAFAuthorName").Result = "" Then
+    GoTo ErrorMsgOnSave
+End If
+
+ClientFirstNameDAFInfo = ActiveDocument.FormFields("ClientFirstNameDAF").Result
+ClientLastNameDAFInfo = ActiveDocument.FormFields("ClientLastNameDAF").Result
+ProgramNameInfo = ActiveDocument.FormFields("ProgramName").Result
+DAFCompleteDateInfo = ActiveDocument.FormFields("DAFCompleteDate").Result
+DAFAuthorNameInfo = ActiveDocument.FormFields("DAFAuthorName").Result
+'
+'Extract author initials in case they are needed later
+FirstInitial = Left(DAFAuthorNameInfo, 1)
+FirstSpace = InStr(1, DAFAuthorNameInfo, " ", vbTextCompare)
+FirstSpace = FirstSpace + 1
+SecondInitial = Mid(DAFAuthorNameInfo, FirstSpace, 1)
+AuthorInitials = FirstInitial & SecondInitial
+
+'make the client name a little more compact
+DAFCtFullName = ClientLastNameDAFInfo & ",_" & ClientFirstNameDAFInfo
+
+'extract program acronym
+StringLength = Len(ProgramNameInfo)
+StringLength = StringLength - 3
+AcroLength = 0
+
+For CounterNo = 1 To StringLength
+    Test1Chars = Mid(ProgramNameInfo, CounterNo, 1)
+    Test2Chars = Mid(ProgramNameInfo, CounterNo + 1, 1)
+    Test3Chars = Mid(ProgramNameInfo, CounterNo + 2, 1)
+    Test4Chars = Mid(ProgramNameInfo, CounterNo + 3, 1)
+
+
+    Select Case Asc(Test1Chars)
+         Case 65 To 90 ' ' It's the first capital letter.
+            Select Case Asc(Test2Chars)
+                Case 65 To 90 ' It's the second capital letter in a row
+                        Select Case Asc(Test3Chars)
+                            Case 65 To 90 ' It's the third capital letter in a row
+                                LeftPosition = CounterNo
+                                AcroLength = 3
+                                Select Case Asc(Test4Chars)
+                                    Case 65 To 90 ' It's the fourth capital letter in a row
+                                        LeftPosition = CounterNo
+                                        AcroLength = 4
+                                        GoTo AcroFound
+                                End Select
+                        End Select
+            End Select
+            Case Else
+    End Select
+
+Next CounterNo
+
+
+If AcroLength = 0 Then
+    MsgBox "There was no program acronym in the Program field. File name could not be created properly."
+    ErrorCounter = ErrorCounter + 1
+    Exit Sub
+End If
+
+AcroFound:
+ProgramAcronym = Mid(ProgramNameInfo, LeftPosition, AcroLength)
+
+
+'and get the date
+SaveDate = Format(DAFCompleteDateInfo, "yyyy_mm_dd")
+
+'DAFFileName = DAFCtFullName & "_" & ProgramNameInfo & "_FullDAF_" & SaveDate & "_" & AuthorInitials
+DAFFileName = DAFCtFullName & "_" & ProgramAcronym & "_FullDAF_" & SaveDate
+
+'Determine file path, append author initials if needed:
+If ProgramNameInfo Like "*A??P*" Then
+    DAFFileName = DAFFileName & "_" & AuthorInitials
+End If
+
+If ProgramNameInfo Like "J??P" Then
+    DAFFileName = DAFFileName & "_" & AuthorInitials
+End If
+
+
+If ProgramNameInfo Like "FTD" Then
+
+End If
+
+
+Exit Sub
+ErrorMsgOnSave:
+MsgBox "One of the necessary fields was not filled out. Check client name, program name, DAF date, author name. Fix the errors and try the button again."
+ErrorCounter = ErrorCounter + 1
+
+End Sub
+
+
+
+Private Sub BtnSendDAFForReview_Click()
+
+'This macro sends a Word Document as an email attachment.
+'Later, identify the supervisor automatically, add their name to the DAF, add name to the file destination.
+
+Dim oOutlookApp As Outlook.Application
+Dim oMsg As Outlook.MailItem
+Dim bStarted As Boolean
+Dim ForReviewDAFFileName As String
+Dim ErrorsPresent As Integer
+
+MsgBox "This will generate the correct DAF file name (adding 'For Review') and save it in the present folder. It then sends it to the supervisor and prints a paper copy."
+
+'get file name
+Call MakeDAFFileName(ForReviewDAFFileName, ErrorsPresent)
+'ammend file name for review
+If ErrorsPresent > 0 Then
+    Exit Sub
+End If
+ForReviewDAFFileName = ForReviewDAFFileName & "_For_Review.docm"
+'save under file name
+ActiveDocument.SaveAs FileName:=ForReviewDAFFileName, _
+        FileFormat:=wdFormatXMLDocumentMacroEnabled
+'send file to supervisor
+On Error Resume Next
+Set oOutlookApp = GetObject(, "Outlook.Application")
+If Err <> 0 Then
+    'Outlook was not running. Open it.
+    Set oOutlookApp = CreateObject("Outlook.Application")
+    'the next line is to track that the macro started Outlook
+     bStarted = True
+End If
+'turn error handling off now
+On Error GoTo 0
+
+'reference : http://word.mvps.org/faqs/interdev/sendmail.htm
+
+Set oMsg = oOutlookApp.CreateItem(0)
+With oMsg
+    .To = "<deletedforprivacy"
+    .Subject = "DAF for review"
+    .Body = "There's a printed copy of this for your review."
+        'Add the document as an attachment, you can use the .displayname property
+        'to set the description that's used in the message
+    .Attachments.Add Source:=ActiveDocument.FullName, Type:=olByValue, DisplayName:="Document as attachment"
+    '.Attachments.Add Me.Path + "\" + Me.Name
+    .Send
+End With
+
+MsgBox "The document was sent by Outlook successfully."
+
+ActiveDocument.PrintOut
+
+'Tidy things up
+'If the macro started Outlook, stop it again.
+If bStarted = True Then
+    oOutlookApp.Quit
+End If
+
+
+Set oMsg = Nothing
+Set oOutlookApp = Nothing
+bStarted = False
+
+
+
+End Sub
+
+
+
+Private Sub BtnTsnSumFromDAF_Click()
+ 'This sub transfers info from a Full DAF to a Transition Summary Form.
+
+'The DAF Formfields follow:
+Dim ClientFirstNameDAF As FormField
+Dim ClientLastNameDAF As FormField
+Dim UnicareIDNumber As FormField
+Dim DAFCompleteDate As FormField
+Dim ProgramName As FormField
+Dim SNAPPreferencesTxt As FormField
+Dim SNAPSkillAbiltiesTxt As FormField
+Dim SNAPNeedsTxt As FormField
+Dim SNAPTxtStrengths As FormField
+Dim ClientAdmissionDate As FormField
+Dim ClientDOBDAF As FormField
+Dim ClientSSNDAF As FormField
+Dim ClientRaceEthnicity As FormField
+Dim CltGenderFYes As CheckBox
+Dim CltGenderMYes As CheckBox
+Dim DateOfInitialDaf As String  'Date from DAF, put into a variable for convienience
+Dim PresentingProbIntroText As String 'In Tsn Sum, introduces presenting prob from DAF
+Dim TextFromDAFPresentProb As String    'Text of Presenting Prob from DAF
+Dim DAFPresProbTxtFld As FormField
+Dim DAFPresProbTxt2 As FormField
+Dim DAFPresProbTxtRng As Range
+Dim TsnRange As Range
+
+If ThisDocument.FormFields("ClientFirstNameDAF").Result = "" Then
+    ErrorField = "First Name"
+    GoTo ErrorMsgOnDAFToTsnFmCopy
+ElseIf ThisDocument.FormFields("ClientLastNameDAF").Result = "" Then
+    ErrorField = "Last Name"
+    GoTo ErrorMsgOnDAFToTsnFmCopy
+ElseIf ThisDocument.FormFields("ProgramName").Result = "" Then
+    ErrorField = "Program Name"
+    GoTo ErrorMsgOnDAFToTsnFmCopy
+ElseIf ThisDocument.FormFields("DAFCompleteDate").Result = "" Then
+    ErrorField = "DAF Completion Date"
+    GoTo ErrorMsgOnDAFToTsnFmCopy
+ElseIf ThisDocument.FormFields("UnicareIDNumber").Result = "" Then
+    ErrorField = "Unicare Number"
+    GoTo ErrorMsgOnDAFToTsnFmCopy
+ElseIf ThisDocument.FormFields("ClientDOBDAF").Result = "" Then
+    ErrorField = "Date of Birth"
+    GoTo ErrorMsgOnDAFToTsnFmCopy
+ElseIf ThisDocument.FormFields("SNAPPreferencesTxt").Result = "" Then
+    ErrorField = "SNAP Preferences"
+    GoTo ErrorMsgOnDAFToTsnFmCopy
+ElseIf ThisDocument.FormFields("SNAPSkillAbiltiesTxt").Result = "" Then
+    ErrorField = "SNAP Abilities"
+    GoTo ErrorMsgOnDAFToTsnFmCopy
+ElseIf ThisDocument.FormFields("SNAPNeedsTxt").Result = "" Then
+    ErrorField = "SNAP Needs"
+    GoTo ErrorMsgOnDAFToTsnFmCopy
+ElseIf ThisDocument.FormFields("SNAPTxtStrengths").Result = "" Then
+    ErrorField = "SNAP Strengths"
+    GoTo ErrorMsgOnDAFToTsnFmCopy
+ElseIf ThisDocument.FormFields("ClientAdmissionDate").Result = "" Then
+    ErrorField = "Client Admission Date"
+    GoTo ErrorMsgOnDAFToTsnFmCopy
+ElseIf ThisDocument.FormFields("TextPresentingProb").Result = "" Then
+    ErrorField = "Presenting Problems"
+    GoTo ErrorMsgOnDAFToTsnFmCopy
+End If
+
+
+'This file needs to be located dependent on program.
+Documents.Open FileName:=ThisDocument.Path & Application.PathSeparator & "Transition Summary 2013 Semiautomated.docm"
+ActiveDocument.ActiveWindow.Activate
+ActiveDocument.FormFields("TSumCtFirstName").Result = ThisDocument.FormFields("ClientFirstNameDAF").Result
+ActiveDocument.FormFields("TSumCtLastName").Result = ThisDocument.FormFields("ClientLastNameDAF").Result
+ActiveDocument.FormFields("CtAdmissionDate").Result = ThisDocument.FormFields("ClientAdmissionDate").Result
+ActiveDocument.FormFields("ClientODISNo").Result = ThisDocument.FormFields("UnicareIDNumber").Result
+'ActiveDocument.FormFields("DAFUCtDOB").Result = ThisDocument.FormFields("ClientDOBDAF").Result
+'ActiveDocument.FormFields("DAFUProgram").Result = ThisDocument.FormFields("ProgramName").Result
+
+
+'Copies SNAP and Presenting Problem info from DAF to Tsn Sum
+If ThisDocument.FormFields("SNAPPreferencesTxt").Result = "" Then
+    GoTo BlankSNAP
+End If
+If ThisDocument.FormFields("SNAPTxtStrengths").Result = "" Then
+    GoTo BlankSNAP
+End If
+If ThisDocument.FormFields("SNAPSkillAbiltiesTxt").Result = "" Then
+    GoTo BlankSNAP
+End If
+If ThisDocument.FormFields("SNAPNeedsTxt").Result = "" Then
+    GoTo BlankSNAP
+End If
+
+'Building the preseting problem final field info:
+DateOfInitialDaf = ThisDocument.FormFields("DAFCompleteDate").Result
+PresentingProbIntroText = "The DAF from " & DateOfInitialDaf & " indicated the following:"
+TextFromDAFPresentProb = ThisDocument.FormFields("TextPresentingProb").Result
+'With ActiveDocument.Tables(1).Cell(Row:=5, Column:=1).Range
+'    .InsertAfter Text:="Cell 1,1"
+
+'Tried to add line returns to the field, but it didn't seem to work.
+'ActiveDocument.FormFields("TSumPresentingProbs").Range.Select
+'SendKeys "END", True
+'SendKeys "ENTER 2", True
+
+'MsgBox "pause to check Tsn Sum"
+
+ActiveDocument.Unprotect 'The TsnSummary
+Set TsnRange = ActiveDocument.Tables(1).Cell(Row:=5, Column:=1).Range
+'TsnRange.End = TsnRange.End - 1
+TsnRange.Select
+
+Selection.Collapse Direction:=wdCollapseEnd
+'the next line is necessary bc otherwise, i'm inserting a field before the info
+'embedded at the end of a cell
+Selection.Move Unit:=wdCharacter, Count:=-1
+Set DAFPresProbTxtFld = ActiveDocument.FormFields.Add(Range:=Selection.Range, _
+    Type:=wdFieldFormTextInput)
+DAFPresProbTxtFld.Name = "DAFPrePbTxt"
+'Selection.FormFields.Add Range:=Selection.Range, Type:= _
+'        wdFieldFormTextInput
+'    Selection.MoveLeft Unit:=wdCharacter, Count:=5
+'    ActiveDocument.ToggleFormsDesignSet DAFPresProbTxtRng = ActiveDocument.FormFields.Add(Range:=Selection.Range, Type:=wdFieldFormTextInput)
+'With DAFPresProbTxtRng
+'    .Name = "DAFPresProbTxtFld"
+'End With
+ActiveDocument.FormFields("DAFPrePbTxt").Range.Select
+    With Selection.ParagraphFormat
+        .LeftIndent = InchesToPoints(0.5)
+        .RightIndent = InchesToPoints(0)
+        .SpaceBefore = 0
+        .SpaceBeforeAuto = False
+        .SpaceAfter = 0
+        .SpaceAfterAuto = False
+        .LineSpacingRule = wdLineSpaceSingle
+        .Alignment = wdAlignParagraphLeft
+        .WidowControl = True
+        .KeepWithNext = False
+        .KeepTogether = False
+        .PageBreakBefore = False
+        .NoLineNumber = False
+        .Hyphenation = True
+        .FirstLineIndent = InchesToPoints(0)
+        .OutlineLevel = wdOutlineLevelBodyText
+        .CharacterUnitLeftIndent = 0
+        .CharacterUnitRightIndent = 0
+        .CharacterUnitFirstLineIndent = 0
+        .LineUnitBefore = 0
+        .LineUnitAfter = 0
+        .MirrorIndents = False
+        .TextboxTightWrap = wdTightNone
+    End With
+    Selection.MoveRight Unit:=wdCharacter, Count:=1
+    Selection.TypeParagraph
+    Selection.TypeParagraph
+    With Selection.ParagraphFormat
+        .LeftIndent = InchesToPoints(0)
+        .RightIndent = InchesToPoints(0)
+        .SpaceBefore = 0
+        .SpaceBeforeAuto = False
+        .SpaceAfter = 0
+        .SpaceAfterAuto = False
+        .LineSpacingRule = wdLineSpaceSingle
+        .Alignment = wdAlignParagraphLeft
+        .WidowControl = True
+        .KeepWithNext = False
+        .KeepTogether = False
+        .PageBreakBefore = False
+        .NoLineNumber = False
+        .Hyphenation = True
+        .FirstLineIndent = InchesToPoints(0)
+        .OutlineLevel = wdOutlineLevelBodyText
+        .CharacterUnitLeftIndent = 0
+        .CharacterUnitRightIndent = 0
+        .CharacterUnitFirstLineIndent = 0
+        .LineUnitBefore = 0
+        .LineUnitAfter = 0
+        .MirrorIndents = False
+        .TextboxTightWrap = wdTightNone
+    End With
+TsnRange.Select
+Selection.Collapse Direction:=wdCollapseEnd
+'the next line is necessary bc otherwise, i'm inserting a field before the info
+'embedded at the end of a cell
+Selection.Move Unit:=wdCharacter, Count:=-1
+Set DAFPresProbTxt2 = ActiveDocument.FormFields.Add(Range:=Selection.Range, _
+    Type:=wdFieldFormTextInput)
+DAFPresProbTxt2.Name = "DAFPrePbTxtC"
+
+TsnRange.Select
+Selection.Collapse Direction:=wdCollapseEnd
+Selection.Move Unit:=wdCharacter, Count:=-1
+Selection.TypeParagraph
+
+'Unlock the docs to avoid the 256 limit on field copies, copy, then relock
+'ActiveDocument.Unprotect 'The TsnSummary
+ThisDocument.Unprotect  'This DAF
+ActiveDocument.Bookmarks("TSumSNAPStren").Range.Fields(1).Result.Text = ThisDocument.FormFields("SNAPTxtStrengths").Result
+ActiveDocument.Bookmarks("TSumSNAPNeeds").Range.Fields(1).Result.Text = ThisDocument.FormFields("SNAPNeedsTxt").Result
+ActiveDocument.Bookmarks("TSumSNAPAbils").Range.Fields(1).Result.Text = ThisDocument.FormFields("SNAPSkillAbiltiesTxt").Result
+ActiveDocument.Bookmarks("TSumSNAPPrefs").Range.Fields(1).Result.Text = ThisDocument.FormFields("SNAPPreferencesTxt").Result
+ActiveDocument.FormFields("TSumPresentingProbs").Result = PresentingProbIntroText
+ActiveDocument.Bookmarks("DAFPrePbTxt").Range.Fields(1).Result.Text = TextFromDAFPresentProb
+
+ActiveDocument.Protect Type:=wdAllowOnlyFormFields, Noreset:=True
+ThisDocument.Protect Type:=wdAllowOnlyFormFields, Noreset:=True
+
+'Copy over the initial dx
+ActiveDocument.FormFields("TSumAxis1Admiss").Result = ThisDocument.FormFields("AxisIPrimaryDxCode").Result & " " & ThisDocument.FormFields("AxisIPrimaryDx").Result
+ActiveDocument.FormFields("TSumAxis2Admiss").Result = ThisDocument.FormFields("AxisIIPrimaryDxCode").Result & " " & ThisDocument.FormFields("AxisIIPrimaryDx").Result
+If Len(ThisDocument.FormFields("AxisIISecondaryDx").Result) > 1 Then
+    ActiveDocument.FormFields("TSumAxis2Admiss").Result = ActiveDocument.FormFields("TSumAxis2Admiss").Result & ";" & ThisDocument.FormFields("AxisIISecondaryDxNo").Result
+    ActiveDocument.FormFields("TSumAxis2Admiss").Result = ActiveDocument.FormFields("TSumAxis2Admiss").Result & " " & ThisDocument.FormFields("AxisIISecondaryDx").Result
+End If
+ActiveDocument.FormFields("TSumAxis3Admiss").Result = ThisDocument.FormFields("AxisIII").Result
+ActiveDocument.FormFields("TSumAxis4Admiss").Result = ThisDocument.FormFields("AxisIV").Result
+ActiveDocument.FormFields("TSumAxis5Admiss").Result = ThisDocument.FormFields("AxisV").Result
+
+MsgBox "The Axis I Secondary diagnoses from the DAF did not copy to the Transition Summary. You have to type it manually."
+
+Unload Me
+
+Exit Sub
+
+BlankSNAP:
+MsgBox "SNAP info was not present in the fields of the DAF. Copying was stopped. It's a long shot, but if you add SNAP info to the DAF, this macro might work if you run it again."
+
+Unload Me
+
+Exit Sub
+
+ErrorMsgOnDAFToTsnFmCopy:
+    MsgBox "The " & ErrorField & " in the DAF was empty and all copying stopped. Fill out the field and try again."
+Unload Me
+
+End Sub
+
+Private Sub CommandButton5_Click()
+'this sub checks for omissions and blank fields in a DAF
+
+Dim ClientFirstNameDAF As FormField
+Dim ClientLastNameDAF As FormField
+Dim ProgramName As FormField
+Dim DAFCompleteDate As FormField
+Dim UnicareIDNumber As FormField
+Dim ClientDOBDAF As FormField
+Dim SNAPPreferencesTxt As FormField
+Dim SNAPSkillAbiltiesTxt As FormField
+Dim SNAPNeedsTxt As FormField
+Dim SNAPTxtStrengths As FormField
+Dim ClientAdmissionDate As FormField
+Dim DAFAuthorName As FormField
+Dim ClientSSNDAF As FormField
+Dim TextPresentingProb As FormField
+Dim TextRecommendations As FormField
+Dim ClinicianNameSigned As FormField
+Dim AxisIPrimaryDx As FormField
+
+
+If ThisDocument.FormFields("ClientFirstNameDAF").Result = "" Then
+    ErrorField = "First Name"
+    GoTo ErrorMsgOnErrorCheck
+ElseIf ActiveDocument.FormFields("ClientLastNameDAF").Result = "" Then
+    ErrorField = "Last Name"
+    GoTo ErrorMsgOnErrorCheck
+ElseIf ActiveDocument.FormFields("ProgramName").Result = "" Then
+    ErrorField = "Program Name"
+    GoTo ErrorMsgOnErrorCheck
+ElseIf ActiveDocument.FormFields("DAFCompleteDate").Result = "" Then
+    ErrorField = "DAF Completion Date"
+    GoTo ErrorMsgOnErrorCheck
+ElseIf ActiveDocument.FormFields("UnicareIDNumber").Result = "" Then
+    ErrorField = "Unicare Number"
+    GoTo ErrorMsgOnErrorCheck
+ElseIf ActiveDocument.FormFields("ClientDOBDAF").Result = "" Then
+    ErrorField = "Date of Birth"
+    GoTo ErrorMsgOnErrorCheck
+ElseIf ActiveDocument.FormFields("SNAPPreferencesTxt").Result = "" Then
+    ErrorField = "SNAP Preferences"
+    GoTo ErrorMsgOnErrorCheck
+ElseIf ActiveDocument.FormFields("SNAPSkillAbiltiesTxt").Result = "" Then
+    ErrorField = "SNAP Abilities"
+    GoTo ErrorMsgOnErrorCheck
+ElseIf ActiveDocument.FormFields("SNAPNeedsTxt").Result = "" Then
+    ErrorField = "SNAP Needs"
+    GoTo ErrorMsgOnErrorCheck
+ElseIf ActiveDocument.FormFields("SNAPTxtStrengths").Result = "" Then
+    ErrorField = "SNAP Strengths"
+    GoTo ErrorMsgOnErrorCheck
+ElseIf ActiveDocument.FormFields("ClientAdmissionDate").Result = "" Then
+    ErrorField = "Client Admission Date"
+    GoTo ErrorMsgOnErrorCheck
+ElseIf ActiveDocument.FormFields("DAFAuthorName").Result = "" Then
+    ErrorField = "DAF Clinician (author)"
+    GoTo ErrorMsgOnErrorCheck
+ElseIf ActiveDocument.FormFields("ClientSSNDAF").Result = "" Then
+    ErrorField = "Client Soc. Sec. number"
+    GoTo ErrorMsgOnErrorCheck
+ElseIf ActiveDocument.FormFields("ClientDOBDAF").Result = "" Then
+    ErrorField = "Client DOB"
+    GoTo ErrorMsgOnErrorCheck
+ElseIf ActiveDocument.FormFields("TextPresentingProb").Result = "" Then
+    ErrorField = "Client Presenting Problem"
+    GoTo ErrorMsgOnErrorCheck
+ElseIf ActiveDocument.FormFields("TextRecommendations").Result = "" Then
+    ErrorField = "Recommendations"
+    GoTo ErrorMsgOnErrorCheck
+ElseIf ActiveDocument.FormFields("ClinicianNameSigned").Result = "" Then
+    ErrorField = "Clinician Name for Signature"
+    GoTo ErrorMsgOnErrorCheck
+ElseIf ActiveDocument.FormFields("AxisIPrimaryDx").Result = "" Then
+    ErrorField = "Client primary diagnosis"
+    GoTo ErrorMsgOnErrorCheck
+End If
+
+MsgBox "No omissions in the fields that were examined!"
+Exit Sub
+ErrorMsgOnErrorCheck:
+ MsgBox "The field " & ErrorField & " in the DAF was empty or deleted."
+
+End Sub
+
+Private Sub CommandButton6_Click()
+
+End Sub
+
+Private Sub MakeDAFUpdateFromDaf_Click()
+
+'The DAF Formfields follow:
+Dim ClientFirstNameDAF As FormField
+Dim ClientLastNameDAF As FormField
+Dim UnicareIDNumber As FormField
+Dim DAFCompleteDate As FormField
+Dim ProgramName As FormField
+Dim SNAPPreferencesTxt As FormField
+Dim SNAPSkillAbiltiesTxt As FormField
+Dim SNAPNeedsTxt As FormField
+Dim SNAPTxtStrengths As FormField
+Dim ClientAdmissionDate As FormField
+Dim ClientDOBDAF As FormField
+Dim ClientSSNDAF As FormField
+Dim ClientRaceEthnicity As FormField
+Dim TextSpirituality As FormField
+Dim CltGenderFYes As CheckBox
+Dim CltGenderMYes As CheckBox
+'The DAF Update Formfields follow:
+Dim DAFUCtFirstName As FormField
+Dim DAFUCtLastName As FormField
+Dim DAFUUnicare As FormField
+Dim DAFUDateOfDAF As FormField
+Dim DAFUProgram As FormField
+Dim DAFUPrefsBodyTxt As FormField
+Dim DAFUSNAPPrefsSum As FormField
+Dim DAFUAbilsBodyTxt As FormField
+Dim DAFUSNAPAbilsSum As FormField
+Dim DAFUNeedsBodyTxt As FormField
+Dim DAFUSNAPNeedsSum As FormField
+Dim DAFUStrenBodyTxt As FormField
+Dim DAFUSNAPStrenSum As FormField
+Dim DAFUAdmissionDate As FormField
+Dim ErrorField As String
+
+If ThisDocument.FormFields("ClientFirstNameDAF").Result = "" Then
+    ErrorField = "First Name"
+    GoTo ErrorMsgOnDAFUpdateCopy
+ElseIf ActiveDocument.FormFields("ClientLastNameDAF").Result = "" Then
+    ErrorField = "Last Name"
+    GoTo ErrorMsgOnDAFUpdateCopy
+ElseIf ActiveDocument.FormFields("ProgramName").Result = "" Then
+    ErrorField = "Program Name"
+    GoTo ErrorMsgOnDAFUpdateCopy
+ElseIf ActiveDocument.FormFields("DAFCompleteDate").Result = "" Then
+    ErrorField = "DAF Completion Date"
+    GoTo ErrorMsgOnDAFUpdateCopy
+ElseIf ActiveDocument.FormFields("UnicareIDNumber").Result = "" Then
+    ErrorField = "Unicare Number"
+    GoTo ErrorMsgOnDAFUpdateCopy
+ElseIf ActiveDocument.FormFields("ClientDOBDAF").Result = "" Then
+    ErrorField = "Date of Birth"
+    GoTo ErrorMsgOnDAFUpdateCopy
+ElseIf ActiveDocument.FormFields("SNAPPreferencesTxt").Result = "" Then
+    ErrorField = "SNAP Preferences"
+    GoTo ErrorMsgOnDAFUpdateCopy
+ElseIf ActiveDocument.FormFields("SNAPSkillAbiltiesTxt").Result = "" Then
+    ErrorField = "SNAP Abilities"
+    GoTo ErrorMsgOnDAFUpdateCopy
+ElseIf ActiveDocument.FormFields("SNAPNeedsTxt").Result = "" Then
+    ErrorField = "SNAP Needs"
+    GoTo ErrorMsgOnDAFUpdateCopy
+ElseIf ActiveDocument.FormFields("SNAPTxtStrengths").Result = "" Then
+    ErrorField = "SNAP Strengths"
+    GoTo ErrorMsgOnDAFUpdateCopy
+ElseIf ActiveDocument.FormFields("ClientAdmissionDate").Result = "" Then
+    ErrorField = "Client Admission Date"
+    GoTo ErrorMsgOnDAFUpdateCopy
+End If
+'This file needs to be located dependent on program.
+Documents.Open FileName:=ThisDocument.Path & Application.PathSeparator & "DAF Update 2013 Semiautomated.docm"
+
+ActiveDocument.FormFields("DAFUCtFirstName").Result = ThisDocument.FormFields("ClientFirstNameDAF").Result
+ActiveDocument.FormFields("DAFUCtLastName").Result = ThisDocument.FormFields("ClientLastNameDAF").Result
+ActiveDocument.FormFields("DAFUAdmissionDate").Result = ThisDocument.FormFields("ClientAdmissionDate").Result
+ActiveDocument.FormFields("DAFUUnicare").Result = ThisDocument.FormFields("UnicareIDNumber").Result
+ActiveDocument.FormFields("DAFUCtDOB").Result = ThisDocument.FormFields("ClientDOBDAF").Result
+ActiveDocument.FormFields("DAFUDateOfDAF").Result = ThisDocument.FormFields("DAFCompleteDate").Result
+
+
+ActiveDocument.Unprotect
+        ActiveDocument.Bookmarks("DAFUPrefsBodyTxt").Range.Fields(1).Result.Text = ThisDocument.FormFields("SNAPPreferencesTxt").Result
+        ActiveDocument.Bookmarks("DAFUSNAPPrefsSum").Range.Fields(1).Result.Text = ThisDocument.FormFields("SNAPPreferencesTxt").Result
+        ActiveDocument.Bookmarks("DAFUAbilsBodyTxt").Range.Fields(1).Result.Text = ThisDocument.FormFields("SNAPSkillAbiltiesTxt").Result
+        ActiveDocument.Bookmarks("DAFUSNAPAbilsSum").Range.Fields(1).Result.Text = ThisDocument.FormFields("SNAPSkillAbiltiesTxt").Result
+        ActiveDocument.Bookmarks("DAFUNeedsBodyTxt").Range.Fields(1).Result.Text = ThisDocument.FormFields("SNAPNeedsTxt").Result
+        ActiveDocument.Bookmarks("DAFUSNAPNeedsSum").Range.Fields(1).Result.Text = ThisDocument.FormFields("SNAPNeedsTxt").Result
+        ActiveDocument.Bookmarks("DAFUStrenBodyTxt").Range.Fields(1).Result.Text = ThisDocument.FormFields("SNAPTxtStrengths").Result
+        ActiveDocument.Bookmarks("DAFUSNAPStrenSum").Range.Fields(1).Result.Text = ThisDocument.FormFields("SNAPTxtStrengths").Result
+ActiveDocument.Protect Type:=wdAllowOnlyFormFields, Noreset:=True
+        
+
+
+MsgBox "Unless you had an error message, the information copied over successfully."
+
+Exit Sub
+
+ErrorMsgOnDAFUpdateCopy:
+    MsgBox "The " & ErrorField & " in the DAF was empty and all copying stopped. Fill out the field and try again."
+End Sub
+
+Private Sub PleaseHelpButton_Click()
+
+HelpMeInfo.Show
+
+End Sub
+
+Private Sub StartISPNo2_Click()
+
+MsgBox "Assuming this DAF is finished, keep this document open. Close all other Word documents. Open a blank semi-automated ISP!"
+
+End Sub
