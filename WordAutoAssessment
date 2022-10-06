@@ -1,0 +1,348 @@
+Option Explicit
+
+Public Sub CalculateAge()
+'
+' CalculateAge Macro
+'
+'This auto-calculates the age of a ct based on DOB and DAF completion date.
+Dim ClientDOBDate As Date
+Dim DAFCompletionDateDate As Date
+Dim ClientAgeCalculated As Long
+Dim ClientMonthsCalculated As Long
+Dim ClientWeeksCalculated As Long
+Dim ClientDaysCalculated As Long
+Dim ClientDOBDAF As FormField
+Dim DAFCompleteDate As FormField
+Dim ClientAge As FormField
+
+'check if there's food in the fridge
+
+If ActiveDocument.FormFields("ClientDOBDAF").Result = "" Then
+    Exit Sub
+    ElseIf ActiveDocument.FormFields("DAFCompleteDate").Result = "" Then
+    Exit Sub
+End If
+
+ClientDOBDate = ActiveDocument.FormFields("ClientDOBDAF").Result
+DAFCompletionDateDate = ActiveDocument.FormFields("DAFCompleteDate").Result
+ClientAgeCalculated = DateDiff("yyyy", ClientDOBDate, DAFCompletionDateDate)
+ClientMonthsCalculated = DateDiff("m", ClientDOBDate, DAFCompletionDateDate)
+If DAFCompletionDateDate < DateSerial(Year(DAFCompletionDateDate), Month(DAFCompletionDateDate), Day(ClientDOBDate)) Then
+        ClientMonthsCalculated = ClientMonthsCalculated - 1
+End If
+
+ClientWeeksCalculated = DateDiff("w", ClientDOBDate, DAFCompletionDateDate)
+ClientDaysCalculated = DateDiff("d", ClientDOBDate, DAFCompletionDateDate)
+If DAFCompletionDateDate < DateSerial(Year(DAFCompletionDateDate), Month(ClientDOBDate), Day(ClientDOBDate)) Then
+        ClientAgeCalculated = ClientAgeCalculated - 1
+End If
+
+If ClientAgeCalculated < 0 Then
+    MsgBox "The age did not calculate correctly. Check the dates."
+End If
+
+
+Select Case ClientMonthsCalculated
+    Case Is > 23
+    ActiveDocument.Unprotect
+    With ActiveDocument.FormFields("ClientAge")
+        .TextInput.EditType wdNumberText
+        .TextInput.Width = 2
+        .Result = ClientAgeCalculated
+    End With
+    ActiveDocument.Protect Type:=wdAllowOnlyFormFields, Noreset:=True
+    
+    Case 2 To 23
+    ActiveDocument.Unprotect
+    With ActiveDocument.FormFields("ClientAge")
+        .TextInput.EditType wdRegularText
+        .TextInput.Width = 9
+        .Result = ClientMonthsCalculated & " months"
+    End With
+    ActiveDocument.Protect Type:=wdAllowOnlyFormFields, Noreset:=True
+    
+    Case 0 To 1 'Under 2 mos, use days and weeks
+
+        Select Case ClientDaysCalculated
+        Case 1 '1 day old
+            ActiveDocument.Unprotect
+            With ActiveDocument.FormFields("ClientAge")
+                .TextInput.EditType wdRegularText
+                .TextInput.Width = 8
+                .Result = ClientDaysCalculated & " day"
+            End With
+            ActiveDocument.Protect Type:=wdAllowOnlyFormFields, Noreset:=True
+        Case 2 To 14 '2 days to 2 weeks = days old
+            ActiveDocument.Unprotect
+            With ActiveDocument.FormFields("ClientAge")
+                .TextInput.EditType wdRegularText
+                .TextInput.Width = 8
+                .Result = ClientDaysCalculated & " days"
+            End With
+            ActiveDocument.Protect Type:=wdAllowOnlyFormFields, Noreset:=True
+        Case 15 To 59 'over 2 weeks old = weeks old, up to 2 mos.
+            ActiveDocument.Unprotect
+            With ActiveDocument.FormFields("ClientAge")
+                .TextInput.EditType wdRegularText
+                .TextInput.Width = 8
+                .Result = ClientWeeksCalculated & " weeks"
+            End With
+            ActiveDocument.Protect Type:=wdAllowOnlyFormFields, Noreset:=True
+        End Select
+End Select
+
+
+End Sub
+
+Public Sub CopyDAFAuthorNameWithinDAF()
+'This macro copies the DAF author name into the other two fields where is is required.
+'It is activated on exit from DAF author name on the first page
+Dim DAFAuthorName As FormField
+Dim ClinicianNameSigned As FormField
+Dim ClinicianSignPSUA As FormField
+
+On Error GoTo CopyingError
+
+If ActiveDocument.FormFields("DAFAuthorName").Result = "" Then
+    MsgBox "Please type in the DAF author's name, including credentials."
+    Exit Sub
+End If
+
+'copies the DAF author name twice
+ActiveDocument.FormFields("ClinicianNameSigned").Result = ActiveDocument.FormFields("DAFAuthorName").Result
+ActiveDocument.FormFields("ClinicianSignPSUA").Result = ActiveDocument.FormFields("DAFAuthorName").Result
+'
+Exit Sub
+
+CopyingError:
+MsgBox "An error occurred when the macro tried to copy a field. The DAF author's name didn't copy."
+'
+End Sub
+
+Public Sub CopySNAPPrefs()
+
+'Copies SNAP info between fields
+Dim AsmtSumrySNAPPrefs As FormField
+Dim SNAPPreferencesTxt As FormField
+
+'only two fields call this code. Which is it?
+
+If Selection.Bookmarks(Selection.Bookmarks.Count).Name = "SNAPPreferencesTxt" Then
+'Is field empty?
+    If ActiveDocument.FormFields("SNAPPreferencesTxt").Result = "" Then
+        GoTo BlankFieldWarning
+        Exit Sub
+    Else   'If notempty, then copy it, avoiding the stupid 256 character limit
+        'ActiveDocument.FormFields("AsmtSumrySNAPPrefs").Result = ActiveDocument.FormFields("SNAPPreferencesTxt").Result
+        ActiveDocument.Unprotect
+        ActiveDocument.Bookmarks("AsmtSumrySNAPPrefs").Range.Fields(1).Result.Text = ActiveDocument.FormFields("SNAPPreferencesTxt").Result
+        ActiveDocument.Protect Type:=wdAllowOnlyFormFields, Noreset:=True
+    Exit Sub
+    End If
+Else 'it must have started in the other field. Is the other one empty?
+    If ActiveDocument.FormFields("AsmtSumrySNAPPrefs").Result = "" Then
+        GoTo BlankFieldWarning
+        Exit Sub
+    Else 'If not empty, then copy it.
+        ActiveDocument.Unprotect
+        ActiveDocument.Bookmarks("SNAPPreferencesTxt").Range.Fields(1).Result.Text = ActiveDocument.FormFields("AsmtSumrySNAPPrefs").Result
+        ActiveDocument.Protect Type:=wdAllowOnlyFormFields, Noreset:=True
+    End If
+End If
+
+Exit Sub
+BlankFieldWarning:
+    MsgBox "FYI, this field will auto-copy if it is not blank."
+Exit Sub
+
+End Sub
+
+Public Sub CopySNAPStren()
+'Copies SNAP info between fields
+Dim AsmtSumrySNAPStren As FormField
+Dim SNAPTxtStrengths As FormField
+
+'only two fields call this code. Which is it?
+
+If Selection.Bookmarks(Selection.Bookmarks.Count).Name = "SNAPTxtStrengths" Then
+'Is field empty?
+
+    If ActiveDocument.FormFields("SNAPTxtStrengths").Result = "" Then
+        GoTo BlankFieldWarning
+        Exit Sub
+    Else   'If notempty, then copy it
+        ActiveDocument.Unprotect
+        ActiveDocument.Bookmarks("AsmtSumrySNAPStren").Range.Fields(1).Result.Text = ActiveDocument.FormFields("SNAPTxtStrengths").Result
+        ActiveDocument.Protect Type:=wdAllowOnlyFormFields, Noreset:=True
+    Exit Sub
+    End If
+Else 'it must have started in the other field. Is the other one empty?
+    If ActiveDocument.FormFields("AsmtSumrySNAPStren").Result = "" Then
+        GoTo BlankFieldWarning
+        Exit Sub
+    Else 'If not empty, then copy it.
+        ActiveDocument.Unprotect
+        ActiveDocument.Bookmarks("SNAPTxtStrengths").Range.Fields(1).Result.Text = ActiveDocument.FormFields("AsmtSumrySNAPStren").Result
+        ActiveDocument.Protect Type:=wdAllowOnlyFormFields, Noreset:=True
+    End If
+End If
+
+Exit Sub
+BlankFieldWarning:
+    MsgBox "FYI, this field will auto-copy if it is not blank."
+Exit Sub
+
+End Sub
+
+Public Sub CopySNAPNeeds()
+'Copies SNAP info between fields
+Dim AsmtSumrySNAPNeeds As FormField
+Dim SNAPNeedsTxt As FormField
+'AsmtSumrySNAPNeeds
+'SNAPNeedsTxt
+'only two fields call this code. Which is it?
+
+If Selection.Bookmarks(Selection.Bookmarks.Count).Name = "SNAPNeedsTxt" Then
+'Is field empty?
+    If ActiveDocument.FormFields("SNAPNeedsTxt").Result = "" Then
+        GoTo BlankFieldWarning
+        Exit Sub
+    Else   'If notempty, then copy it
+        ActiveDocument.Unprotect
+        ActiveDocument.Bookmarks("AsmtSumrySNAPNeeds").Range.Fields(1).Result.Text = ActiveDocument.FormFields("SNAPNeedsTxt").Result
+        ActiveDocument.Protect Type:=wdAllowOnlyFormFields, Noreset:=True
+    Exit Sub
+    End If
+Else 'it must have started in the other field. Is the other one empty?
+    If ActiveDocument.FormFields("AsmtSumrySNAPNeeds").Result = "" Then
+        GoTo BlankFieldWarning
+        Exit Sub
+    Else 'If not empty, then copy it.
+        ActiveDocument.Unprotect
+        ActiveDocument.Bookmarks("SNAPNeedsTxt").Range.Fields(1).Result.Text = ActiveDocument.FormFields("AsmtSumrySNAPNeeds").Result
+        ActiveDocument.Protect Type:=wdAllowOnlyFormFields, Noreset:=True
+    End If
+End If
+
+Exit Sub
+BlankFieldWarning:
+    MsgBox "FYI, this field will auto-copy if it is not blank."
+Exit Sub
+End Sub
+
+Public Sub CopySNAPAbils()
+'Copies SNAP info between fields
+Dim AsmtSumrySNAPAbils As FormField
+Dim SNAPSkillAbiltiesTxt As FormField
+'AsmtSumrySNAPAbils
+'SNAPSkillAbiltiesTxt
+'only two fields call this code. Which is it?
+
+If Selection.Bookmarks(Selection.Bookmarks.Count).Name = "SNAPSkillAbiltiesTxt" Then
+'Is field empty?
+    If ActiveDocument.FormFields("SNAPSkillAbiltiesTxt").Result = "" Then
+        GoTo BlankFieldWarning
+        Exit Sub
+    Else   'If notempty, then copy it
+        ActiveDocument.Unprotect
+        ActiveDocument.Bookmarks("AsmtSumrySNAPAbils").Range.Fields(1).Result.Text = ActiveDocument.FormFields("SNAPSkillAbiltiesTxt").Result
+        ActiveDocument.Protect Type:=wdAllowOnlyFormFields, Noreset:=True
+    Exit Sub
+    End If
+Else 'it must have started in the other field. Is the other one empty?
+    If ActiveDocument.FormFields("AsmtSumrySNAPAbils").Result = "" Then
+        GoTo BlankFieldWarning
+        Exit Sub
+    Else 'If not empty, then copy it.
+        ActiveDocument.Unprotect
+        ActiveDocument.Bookmarks("SNAPSkillAbiltiesTxt").Range.Fields(1).Result.Text = ActiveDocument.FormFields("AsmtSumrySNAPAbils").Result
+        ActiveDocument.Protect Type:=wdAllowOnlyFormFields, Noreset:=True
+    End If
+End If
+
+Exit Sub
+BlankFieldWarning:
+    MsgBox "FYI, this field will auto-copy if it is not blank."
+Exit Sub
+End Sub
+
+Public Sub ProgramPickForm()
+
+If ActiveDocument.FormFields("SJOProgramName").Result = "" Then
+    FrmPickAProgram.Show
+End If
+
+End Sub
+
+Public Sub DAFInsertTodayDate(ByRef FieldChoiceDAF As Integer)
+' Inserts today's date into DAF Completion date if so desired by user.
+Dim DAFResponse As String
+Dim TodaysDate As Date
+
+TodaysDate = Format(Now, "mm/dd/yyyy")
+
+DAFResponse = MsgBox("Insert today's date?", vbYesNoCancel, "Use today's date?")
+
+If DAFResponse = vbYes Then
+    If FieldChoiceDAF = 3 Then
+        ActiveDocument.FormFields("ClientAdmissionDate").Result = TodaysDate
+        Exit Sub
+    End If
+    
+    If FieldChoiceDAF = 4 Then
+        ActiveDocument.FormFields("DAFCompleteDate").Result = TodaysDate
+        Exit Sub
+    End If
+End If
+
+End Sub
+
+Public Sub AdmissDateInsert()
+'Calls a sub to insert today's date into a field.
+
+Dim FieldChoice2 As Integer
+
+If ActiveDocument.FormFields("ClientAdmissionDate").Result = "" Then
+    FieldChoice2 = 3
+    Call DAFInsertTodayDate(FieldChoice2)
+End If
+
+End Sub
+
+Public Sub DAFComplDateInsert()
+Dim FieldChoice3 As Integer
+
+If ActiveDocument.FormFields("DAFCompleteDate").Result = "" Then
+    FieldChoice3 = 4
+    Call DAFInsertTodayDate(FieldChoice3)
+End If
+
+End Sub
+
+
+Public Sub AutoDAFAuthor()
+'this sub inserts the user's name and credentials into the DAF author line.
+
+Dim AuthorName As String
+Dim AuthorNameTxt As String
+AuthorName = Application.UserName
+
+Select Case AuthorName
+'deleted for privacy
+End Select
+
+If ThisDocument.FormFields("DAFAuthorName").Result = "" Then
+    ThisDocument.FormFields("DAFAuthorName").Result = AuthorNameTxt
+End If
+
+End Sub
+
+Public Sub InfoReAutomation()
+
+Dim ClientFirstNameDAF As FormField
+
+If ThisDocument.FormFields("ClientFirstNameDAF").Result = "First" Then
+    MsgBox "Tab through fields in this document to run any associated automation. You can double click on the title of this document for automation options."
+End If
+
+End Sub
