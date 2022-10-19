@@ -1,5 +1,10 @@
-Public Sub CbxMedYes()
+'This series of functions examined a particular document for errors or omissions and auto-completed some fields. 
+'Most subs were called upon tabbing in or out of a field in the document. Some were called as part of
+'an error check. 
 
+Public Sub CbxMedYes()
+'If the treatment summary did not list a date for the last medical appointment, check a box to say that
+'a medical appointment is needed.
 Dim TSumMedDate As FormField
 Dim CbxMedical As CheckBox
 
@@ -10,6 +15,8 @@ End If
 End Sub
 
 Public Sub CbxOptYes()
+'If the treatment summary did not list a date for the last eye appointment, check a box to say that
+'an eye appointment is needed.
 
 Dim TSumOptDate As FormField
 Dim CbxOptical As CheckBox
@@ -19,7 +26,10 @@ If ThisDocument.FormFields("TSumOptDate").Result <> "" Then
 End If
 
 End Sub
+
 Public Sub CbxDenYes()
+'If the treatment summary did not list a date for the last dental appointment, check a box to say that
+'a dental appointment is needed.
 
 Dim TSumDentalDate As FormField
 Dim CbxDental As CheckBox
@@ -31,6 +41,7 @@ End If
 End Sub
 
 Public Sub InsertHelperName()
+'Auto-enter the author's name, if indicated. 
 
 Dim HelperName As String
 Dim Response As Variant
@@ -51,6 +62,7 @@ End If
 End Sub
 
 Public Sub InsertNameAsAuth()
+'Auto-enter the author's name, if indicated. 
 
 Dim DocAuthor As String
 Dim Response As Variant
@@ -71,19 +83,19 @@ End Sub
 
 
 Public Sub InsertToday(FieldChoiceC As Long)
-
+'Inserts today's date into a field when called.
 Dim Response As String
 Dim TodaysDate As Date
 
 TodaysDate = Format(Now, "mm/dd/yyyy")
 
 
-    If FieldChoiceC = 5 Then
+    If FieldChoiceC = 5 Then 'called from Discharge Date field
         ActiveDocument.FormFields("CtDischargeDate").Result = TodaysDate
         Exit Sub
     End If
     
-    If FieldChoiceC = 6 Then
+    If FieldChoiceC = 6 Then 'called from Date Mailed field
         ActiveDocument.FormFields("TSumDateGivenMailed").Result = TodaysDate
         Exit Sub
     End If
