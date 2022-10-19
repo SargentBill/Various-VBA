@@ -1,3 +1,6 @@
+'This VBA took raw CSV data from an Android milage/productivity app, separated mileage records from notes, prepared a
+'mileage form for reimbursement, and created a spreadsheet with billable and nonbillable hours. 
+
 Public Sub FormatRawMileage()
 
 Dim RowLoopVar As Integer
