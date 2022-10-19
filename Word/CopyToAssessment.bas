@@ -1,4 +1,6 @@
-
+'This VBA copies information from a database and inserts the information into an assessment tool. 
+'It eliminates the time and errors that might result from manual typing.
+'It alerts the user if needed info was not present in the database. 
 
 Public Sub PutOTISInfoIntoAssmt(AssessmentType As Integer)
 
