@@ -7,8 +7,8 @@ Public Sub CopyFieldInfoAllDocs()
 'It copies the active field's info to the same field of another open document.
 'Both fields have to be named.
 'any number of documents
-'It works around the stupid 256 character copy limit for fields.
-'Bill Sargent 2013 St Joseph Orphanage, Cincinnati Ohio
+'It works around the 256 character copy limit for fields.
+
 
 Dim ChosenFieldName As String
 Dim FirstDocumentName As String
