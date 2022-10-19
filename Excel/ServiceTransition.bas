@@ -1,3 +1,9 @@
+'This VBA code was attached to a particular document for service transition. The code automated some completion of fields,
+'checked fields for omission or errors, generated a filename of Last.First.ServiceProgram.Transition.TransitionDate,
+'saved the file in the correct location, generated an email in Outlook (with address list, topic and message)
+'and attached the document to the email. 
+'Most of the subs were triggered from tabbing in or out of a form field in Word.
+
 Public Sub InsertTodaysDate(ByRef FieldChoice As Integer)
 
 
