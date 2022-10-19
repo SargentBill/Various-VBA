@@ -1,3 +1,19 @@
+'This VBA was attached to an assessment document in Word and assisted with auto-completion, finding errors and
+'omissions, and copying information within the document.
+
+'CalculateAge followed social conventions to report the age of a child.  It would output "one day old", 
+'"two days old", "three weeks old", etc for very young children, and output in years for children over 24 months. 
+
+'The document required the author to input their name and credentials three separate times. The sub 
+'CopyDAFAuthorNameWithinDAF copied the name/credentials field into the other two. 
+
+'The document required the author to copy four sections into the document's summary. The subs
+' CopySNAPPrefs CopySNAPStren CopySNAPNeeds and CopySNAPAbils  did this automatically.
+
+'The sub InsertDate inserted today's date into fields when called. 
+'The sub ProgramPickForm showed a UserForm that allowed a used to click a button to complete the field. 
+'
+
 Option Explicit
 
 Public Sub CalculateAge()
@@ -188,6 +204,7 @@ Else 'it must have started in the other field. Is the other one empty?
 End If
 
 Exit Sub
+
 BlankFieldWarning:
     MsgBox "FYI, this field will auto-copy if it is not blank."
 Exit Sub
@@ -276,6 +293,7 @@ End Sub
 
 Public Sub DAFInsertTodayDate(ByRef FieldChoiceDAF As Integer)
 ' Inserts today's date into DAF Completion date if so desired by user.
+' Is called in different parts of the document. 
 Dim DAFResponse As String
 Dim TodaysDate As Date
 
